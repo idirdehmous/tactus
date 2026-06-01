@@ -1,0 +1,315 @@
+# Data assimilation modification file
+# ------------------------------------------------------------------
+# Enables the CANARI (surface OI) + 3D-Var upper-air assimilation
+# chain between FirstGuess and Forecast.
+#
+# Usage:
+#   tactus case @<config_file> assimilation.toml -o <output.toml> --start-suite
+#
+# Required: fill in [da] paths below for your site / experiment.
+# ------------------------------------------------------------------
+
+# submission
+[submission]
+bindir = "/perm/sis/tactus_bin/@CYCLE@/@COMPILER@/@PRECISION@/bin"
+precision = "R64"
+
+[system]
+assimilation_input_definition = "@CYCLE@/assimilation.json"
+
+# DA section — paths and tuning
+[da]
+[da.suite_control]
+do_assimilation = true
+do_surface      = true
+do_upper_air    = false
+
+# STATIC Dirs 
+[da.dirs]
+obs_dir     = "/scratch/sis/da/obs/"
+scratch_dir = "@SCRATCH@/da/@CASE@/scratch"
+bin_dir     ="/perm/sis/tactus_bin/@CYCLE@/@COMPILER@/@PRECISION@/bin_gmkpack"
+const_dir   ="/scratch/sis/da/const" 
+namelist_dir=""
+script_dir  =""   # Where to find create_ioassign ,merge_ioassign , obsoul_merge.pl ...etc
+guess_dir   ="@SCRATCH@/da/@CASE@/guess"
+analysis_dir="@SCRATCH@/da/@CASE@/analysis"
+varbc_dir   ="@SCRATCH@/da/@CASE@/varbc"
+bgcycle     ="@SCRATCH@/da/@CASE@/bgcycle"
+#rttov_coef_dir  // TBD 
+
+
+
+# Cold-start basetime (YYYYMMDDRR): skips VARBC / first-guess checks.
+# Set to the first cycle of a new experiment.
+
+## TBC or improved 
+obs_type={surface=["synop"] , upper_air=[ "synop", "gpssol", "amdr", "geowind", "temp", "wp", "seviri", "amsua", "amsub", "iasi", "ascat", ] } 
+
+# BATOR window / slot configuration
+bator_window_len   = 180   # window length [minutes], symmetric around analysis time
+bator_window_shift = -90   # window start offset [minutes] (negative = before)
+bator_slot_len     = 0     # slot length [minutes]; 0 = single slot
+bator_nbslot       = 1     # number of BATOR time slots
+
+# Path to the obsoul_merge.pl script used to merge multiple OBSOUL files.
+# Supports @CYCLE@, @COMPILER@, @PRECISION@ substitutions.
+obsoul_merge_script = "/perm/sis/tactus_bin/@CYCLE@/@COMPILER@/@PRECISION@/bin/obsoul_merge.pl"
+
+# GPS station whitelist for BATOR (list_gpssol)
+gpssol_stations = []
+
+# ==================================================================
+# Observation network registry
+# ==================================================================
+# Each [da.providers.<NAME>] block defines one observation provider.
+# ObsPrep reads the block selected by da.obs_provider at runtime.
+#
+# Network-level settings:
+#   obs_step  — minutes between archive file slots.
+#               -1 = single slot at basetime (windowing disabled).
+#               60 = hourly archive; all slots inside the assimilation
+#                    window are searched and results merged.
+#
+# Per-obstype sub-tables ([da.providers.<NAME>.<obstype>]):
+#   candidates  — filename templates tried in order.  All matches
+#                 across all window slots are collected and merged.
+#                 Placeholders: {ymdrr}, {yyyy}, {mm}, {dd}, {rr}.
+#   local_name  — filename BATOR expects in the working directory.
+#   source_dir  — optional; overrides da.obs_dir/YYYY/MM/DD as the
+#                 search root (supports @PLATFORM@ substitutions).
+# ==================================================================
+
+
+
+
+# Observation providers and files templates 
+# LACE , NWC , RMI , MF ...
+[templates_candidats]
+synop_lace = ["obsoul_1_xxxxxx_hu_{ymdrr}", 
+             "obsoul_1_xxxxxy_hu_{ymdrr}", 
+             "obsoul_1_xxxxxy_at_{ymdrr}", 
+             "obsoul_1_xxxxxy_cz_{ymdrr}", 
+             "obsoul_1_xxxxxy_sk_{ymdrr}", 
+             "obsoul_1_xxxxxy_ro_{ymdrr}", 
+             "obsoul_1_xxxxxy_si_{ymdrr}", 
+             "obsoul_1_xxxxxy_cr_{ymdrr}", 
+             "obsoul_1_xxxxxy_pl_{ymdrr}" ]
+
+gpssol_lace = "bufr_1_ztd_egvap_{ymdrr}"
+amdar_lace  =["obsoul_2_xxxxxx_xx_{ymdrr}", 
+              "obsoul_2_ehs_eu_{ymdrr}"    ]
+ 
+geowind_lace =["bufr_3_geowind_xx_{ymdrr}"]
+
+temp_lace    = "obsoul_5_xxxxxx_xx_{ymdrr}"
+
+wp_lace      = "obsoul_6_xxxxxx_xx_{ymdrr}"
+
+amsua_lace   = ["bufr_7_amsua_metopc_{ymdrr}", 
+              "bufr_7_amsua_metopb_{ymdrr}"]
+
+iasi_lace    = ["bufr_7_iasi_metopb_{ymdrr}",
+                "bufr_7_iasi_metopc_{ymdrr}" ]
+
+
+# UWC file templates 
+synop_uwc  =["obsoul_1_xxxxxx_xx_{ymdrr}"]
+synop_1_uwc=["obsoul_1_xxxxxy_xx_{ymdrr}"]
+amdr_uwc   =["obsoul_2_xxxxxx_xx_{ymdrr}"]
+temp_uwc   =["obsoul_5_xxxxxx_xx_{ymdrr}"]
+uw_uwc     =["obsoul_6_xxxxxx_xx_{ymdrr}"]
+geowind_uwc=["obsoul_3_xxxxxx_xx_{ymdrr}"]
+gpssol_uwc =["obsoul_9_xxxxxx_xx_{ymdrr}"]
+
+amsua_uwc  =["bufr_7_amsua_metopc_{ymdrr}",
+             "bufr_7_amsua_metopb_{ymdrr}",
+             "bufr_7_amsua_noaa18_{ymdrr}",
+             "bufr_7_amsua_noaa19_{ymdrr}"]
+              
+amsub_uwc  =["bufr_7_mhs_metopc_{ymdrr}",
+             "bufr_7_mhs_metopb_{ymdrr}",
+             "bufr_7_mhs_noaa19_{ymdrr}" ]
+
+iasi_uwc   =["bufr_7_iasi_metopb_{ymdrr}",
+             "bufr_7_iasi_metopc_{ymdrr}"]
+
+ascat_uwc  =["bufr_9_ascatC_metopb_{ymdrr}",
+             "bufr_9_ascatC_metopc_{ymdrr}"]
+
+seviri_uwc =["netcdf_7_seviri_xx_{ymdrr}" ]
+
+synop_rmi=["synop_{ymdrr}00.bufr"]
+
+
+
+[da.providers.LACE]
+obstypes.synop  = { obs_step=-1 , format = "OBSOUL"   , candidates = ["templates_candidats.synop_lace" ] }
+obstypes.gpssol = { obs_step=-1,  format = "OBSOUL"   , candidates = ["templates_candidats.gpssol_lace"] }
+obstypes.temp   = { obs_step=-1 , format = "OBSOUL"   , candidates = ["templates_candidats.temp_lace" ]  }
+obstypes.wp     = { obs_step=-1 , format = "OBSOUL"   , candidates = ["templates_candidats.temp_lace" ]  }
+obstypes.amdar  = { obs_step=-1 , format = "BUFR"     , candidates = ["templates_candidats.amdar_lace"]  }
+obstypes.amsua  = { obs_step=-1 , format = "BUFR"     , candidates = ["templates_candidats.amsua_lace"]  }
+obstypes.iasi   = { obs_step=-1 , format = "BUFR"     , candidates = ["templates_candidats.iasi_lace" ]  }
+
+# UWC — United Weather Centres / ECMWF OPLACE convention.
+# Conventional obs as obsoul_<code>_xxxxxx_xx_<YYYYMMDDRR>;
+# satellite obs as BUFR_<YYYYMMDDRR>.<type> or NETCDF_*.
+[da.providers.UWC]
+obstypes.synop  = { obs_step=60 , format = "OBSOUL" , candidates = ["templates_candidats.synop_uwc"   ] }
+obstypes.synop_1= { obs_step=60 , format = "OBSOUL" , candidates = ["templates_candidats.synop_1_uwc" ] }
+obstypes.gpssol = { obs_step=60 , format = "OBSOUL" , candidates = ["templates_candidats.gpssol_uwc"  ] }
+obstypes.temp   = { obs_step=60 , format = "OBSOUL" , candidates = ["templates_candidats.temp_uwc"    ] }
+obstypes.geowind= { obs_step=60 , format = "OBSOUL" , candidates = ["templates_candidats.geowind_uwc" ] }
+obstypes.wp     = { obs_step=60 , format = "OBSOUL" , candidates = ["templates_candidats.wp_uwc"      ] }
+obstypes.amdr   = { obs_step=60 , format = "BUFR"   , candidates = ["templates_candidats.amdr_uwc"    ] }
+obstypes.amsua  = { obs_step=60 , format = "BUFR"   , candidates = ["templates_candidats.amsua_uwc"   ] }
+obstypes.ascat  = { obs_step=60 , format = "BUFR"   , candidates = ["templates_candidats.amsua_uwc"   ] }
+obstypes.iasi   = { obs_step=60 , format = "BUFR"   , candidates = ["templates_candidats.iasi_uwc"    ] }
+obstypes.seviri = { obs_step=60 , format = "NETCDF" , candidates = ["templates_candidats.seviri_uwc"  ] }
+
+# RMI obs files name tempplate
+[da.providers.RMI]
+obstypes.synop = { obs_step=-1  , format = "BUFR", candidates = ["templates_candidats.synop_rmi"]  }
+
+# MF — Météo-France BDAP convention.
+#[da.providers.MF]
+#obs_step = 60
+
+
+
+
+# The sections below will be used as variables in the next subsections (task_exceptions)
+# ObsPrep , Bator , ObsConvert , Screening , oopsvar & minim lists 
+
+# 1-  Observation pre processing 
+[ObsPrep_batch]
+NTASKS   = "#SBATCH --ntasks=1"
+WALLTIME = "#SBATCH --time=00:20:00"
+
+[ObsPrep_env]
+NPROC = 1
+
+[Bator_batch]
+QOS      = "#SBATCH --qos=np"
+NODES    = "#SBATCH --nodes=1" 
+NTASKS   = "#SBATCH --ntasks=16"
+WALLTIME = "#SBATCH --time=00:30:00"
+NNPTASK  = "#SBATCH --cpus-per-task=2"
+MEM      = "#SBATCH --mem=200GB"
+HINT     = "#SBATCH --hint=nomultithread" 
+
+[Bator_modules]
+INTEL_01 = {load="true", modules="intel/2023.2.0"}
+
+[Bator_env]
+NPROC  = 1
+NBPOOL = 16
+OPENMP = true
+DR_HOOK_ASSERT_MPI_INITIALIZED = "0"
+
+
+# OdbMerge (shuffle + merge_ioassign) 
+[OdbMerge_batch]
+NTASKS   = "#SBATCH --ntasks=1"
+WALLTIME = "#SBATCH --time=00:15:00"
+MEM      = "#SBATCH --mem=20GB"
+
+[OdbMerge_modules]
+INTEL_01 = {load=true, modules="intel/2023.2.0"}
+
+[OdbMerge_env]
+NPROC = 1
+
+# 2- Surface analysis   (Canari + Blendsur )
+[Canari_batch]
+QOS      = "#SBATCH --qos=np"
+NODES    = "#SBATCH --nodes=1"
+NTASKS   = "#SBATCH --ntasks=16"
+WALLTIME = "#SBATCH --time=00:30:00"
+MEM      = "#SBATCH --mem=120000MB"
+
+[Canari_modules]
+INTEL_01 = {load=true, modules="intel/2023.2.0" }
+OPENMPI  = {load=true, modules="openmpi/4.1.1.1"}
+
+[Canari_env]
+NPROC  = 16
+
+
+[Blendsur_batch]
+NTASKS   = "#SBATCH --ntasks=1"
+WALLTIME = "#SBATCH --time=00:10:00"
+
+[Blendsur_modules]
+INTEL_01 = {load=true, modules="intel/2023.2.0"}
+
+[Blendsur_env]
+
+
+# 3. Upper air analysis  
+#[submission.task_exceptions.OopsVar.BATCH]
+[OopsVar_batch]
+QOS         = "#SBATCH --qos=np"
+NODES       = "#SBATCH --nodes=10"
+NTASKS      = "#SBATCH --ntasks=128"
+HINT        = "#SBATCH --hint=nomultithread"
+WALLTIME    = "#SBATCH --time=01:00:00"
+
+[OopsVar_modules]
+INTEL_01    = {load =true  , modules="intel/2023.2.0"    }
+MPIPACKAGE1 = {load =false , modules="hpcx-openmpi/2.9.0"}
+MPIPACKAGE2 = {load =true  , modules="openmpi/4.1.1.1"   }
+
+[OopsVar_env]
+NPROC  = 128
+
+#[submission.task_exceptions.Screen.BATCH]
+[Screen_batch]
+NODES    = "#SBATCH --nodes=6"
+NTASKS   = "#SBATCH --ntasks=128"
+NNPTASK  = "#SBATCH --cpus-per-task=2"
+MEM      = "#SBATCH --mem=200GB"
+WALLTIME = "#SBATCH --time=00:30:00"
+
+[Screen_env]
+NPROC    = 128
+OMP_PLACES= "threads"
+OMP_NUM_THREADS = "2"
+
+
+
+[Minim_batch]
+NODES   = "#SBATCH --nodes=16"
+NTASKS  = "#SBATCH --ntasks-per-node=16"
+NNPTASK = "#SBATCH --cpus-per-task=8"
+WALLTIME= "#SBATCH --time=00:45:00"
+
+
+[Minim_env]
+NPROC   = 128
+OMP_PLACES= "threads"
+OMP_NUM_THREADS = "2"
+
+# TODO
+[da.oops]
+# Minimization inner-loop settings
+#   niter    = 66
+#   nsimu    = 69
+#   rednmc   = 0.5
+
+
+
+# Gather all the settings above and fill task_submission exceptions section 
+# 1.  Surface  
+[submission.task_exceptions]
+ObsPrep  = {bindir=["bin_dir"], batch = ["ObsPrep_Batch" ] ,modules=["ObsPrep_modules" ] , env=["ObsPrep_env" ]}
+Bator    = {bindir=["bin_dir"], batch = ["Bator_Batch"   ] ,modules=["Bator_modules"   ] , env=["Bator_env"   ]}
+OdbMerge = {bindir=["bin_dir"], batch = ["OdbMerge_Batch"] ,modules=["OdbMerge_modules"] , env=["OdbMerge_env"]}
+Blendsur = {bindir=["bin_dir"], batch = ["Blendsur_Batch"] ,modules=["Blendsur_modules"] , env=["Blendsur_env"]}
+Canari   = {bindir=["bin_dir"], batch = ["Canari_Batch"  ] ,modules=["Canari_modules"  ] , env=["Canari_env"  ]}
+
+# 2.  Upper air  
+Screen   = {bindir=["bin_dir"], batch = ["Screen_Batch" ] ,modules=["Screen_modules"]  , env=["Screen_env" ]}
+Minim    = {bindir=["bin_dir"], batch = ["Minim_Batch"  ] ,modules=["Minim_modules" ]  , env=["Minim_env"  ]}
+OopsVar  = {bindir=["bin_dir"], batch = ["OopsVar_Batch"] ,modules=["OopsVar_modules"] , env=["OopsVar_env"]}
